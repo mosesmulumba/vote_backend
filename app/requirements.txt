@@ -1,0 +1,3 @@
+Flask-Migrate-4.0.7
+Flask-restx
+Flask-sqlalchemy
