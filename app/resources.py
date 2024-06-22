@@ -4,6 +4,9 @@ from flask_sqlalchemy import SQLAlchemy
 api = Api()
 db = SQLAlchemy()
 
+# authorizations = {"Bearer": {"type": "apiKey", "in": "header", "name": "Authorization"}}
+
+api = Api(version='1.0', title='Vote API', description='Vote API Documentation')
 
 # create the namespaces
 auth_ns = Namespace('auth', description="Authentication Operation")

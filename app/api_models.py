@@ -3,18 +3,25 @@ from .resources import *
 
 login_model = auth_ns.model("Login",{
     "username": fields.String(required=True),
-    "password" : fields.String(required=True),
+    "email" : fields.String(required=True),
 })
 
 members_model = member_ns.model("User", {
     "id": fields.Integer,
     "username" : fields.String,
-    "password" : fields.String
+    "password" : fields.String,
+    "email": fields.String,
+    "created_date": fields.DateTime,
+    "verified": fields.Boolean,
+    "role": fields.String
 })
 
 member_model_input = member_ns.model("MemberInput",{
     "username" : fields.String,
-    "password" : fields.String
+    "email": fields.String,
+    "password" : fields.String,
+    "created_date": fields.DateTime,
+    "role": fields.String
 })
 
 

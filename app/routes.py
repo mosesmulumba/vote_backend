@@ -1,10 +1,22 @@
 from flask import jsonify , request
-from flask_jwt_extended import create_access_token ,jwt_required , get_jwt_identity
+from functools import wraps
+from flask_jwt_extended import create_access_token ,jwt_required , get_jwt_identity , verify_jwt_in_request
 from flask_restx import  Resource
 from .resources import db , api , auth_ns, member_ns, candidate_ns, election_ns, vote_ns , result_ns
 from .api_models import members_model , member_model_input , candidate_model_input , candidate_model , vote_model , vote_model_input , election_model , election_model_input , login_model
 from .models import User , Candidate , Vote , Election
 
+
+# creating the role custom function to check if one is admin
+def admin_required(fn):
+    @wraps(fn)
+    def wrapper(*args , **kwargs):
+        verify_jwt_in_request()
+        claims = get_jwt_identity()
+        if claims['role'] != 'admin':
+            return jsonify({'msg':'Admins only allowed'}) , 403
+        return fn(*args , **kwargs)
+    return wrapper
 
 @auth_ns.route('/login')
 class Login(Resource):
@@ -12,10 +24,18 @@ class Login(Resource):
     def post(self):
         data = auth_ns.payload
         user = User.query.filter_by(username=data['username']).first()
-        if user and user.password == data['password']:
-            access_token = create_access_token(identity=user.id)
-            return jsonify(access_token=access_token)
-        return jsonify({'msg': 'Bad Username or Password'}), 401
+        if user and user.email == data['email']:
+            access_token = create_access_token(identity={'id':user.id , 'role':user.role})
+            result_access_token = [access_token]
+            return jsonify({
+                "access_token" :result_access_token , 
+                "username" : user.username , 
+                "user-password" :user.password,
+                "user_email" : user.email,
+                "role" : user.role,
+                "date_created": user.date_created
+                })
+        return jsonify({'msg': 'Bad Username or email'}), 401
 
 
 # Error Handling
@@ -33,34 +53,48 @@ def handle_bad_request(error):
 
 @member_ns.route("")
 class Members_LIST_API(Resource):
+    # @jwt_required()
+    # @admin_required
     @member_ns.marshal_list_with(members_model)
     def get(self):
         return User.query.all()
 
+    # @jwt_required()
+    # @admin_required
     @member_ns.expect(member_model_input)
     @member_ns.marshal_with(members_model)
     def post(self):
-        student = User(username=member_ns.payload['username'], password=member_ns.payload['password'])
+        student = User(username=member_ns.payload['username'],
+                       email=member_ns.payload['email'],
+                       password=member_ns.payload['password']
+                       )
         db.session.add(student)
         db.session.commit()
         return student
     
 @member_ns.route("/<int:id>")
 class Member_ByID(Resource):
+    # @jwt_required()
+    # @admin_required
     @member_ns.marshal_with(members_model)
     def get(self, id):
         student = User.query.get(id)
         return student
     
+    # @jwt_required()
+    # @admin_required
     @member_ns.expect(member_model_input)
     @member_ns.marshal_with(members_model)
     def put(self, id):
         student = User.query.get(id)
         student.username = member_ns.payload['username']
+        student.email = member_ns.payload['email']
         student.password = member_ns.payload['password']
         db.session.commit()
         return student
     
+    # @jwt_required()
+    # @admin_required
     def delete(self, id):
         student = User.query.get(id)
         db.session.delete(student)
@@ -70,10 +104,14 @@ class Member_ByID(Resource):
 
 @candidate_ns.route('')
 class Candidate_API_LIST(Resource):
+    # @jwt_required()
+    # @admin_required
     @candidate_ns.marshal_list_with(candidate_model)
     def get(self):
         return Candidate.query.all()
     
+    # @jwt_required()
+    # @admin_required
     @candidate_ns.expect(candidate_model_input)
     @candidate_ns.marshal_with(candidate_model)
     def post(self):
@@ -89,6 +127,8 @@ class Single_Candidate(Resource):
         candidate = Candidate.query.get(id)
         return candidate
     
+    # @jwt_required()
+    # @admin_required
     @candidate_ns.expect(candidate_model_input)
     @candidate_ns.marshal_with(candidate_model)
     def put(self, id):
@@ -98,6 +138,9 @@ class Single_Candidate(Resource):
         db.session.commit()
         return candidate
     
+
+    # @jwt_required()
+    # @admin_required
     def delete(self, id):
         candidate = Candidate.query.get(id)
         db.session.delete(candidate)
@@ -124,6 +167,8 @@ class Votes(Resource):
     
 
 class Election_Results(Resource):
+    # @jwt_required()
+    # @admin_required
     def get(self):
         # results = db.session.query(
         #     Vote.candidate_id , db.func.count(Vote.id).label('votes')
@@ -141,6 +186,8 @@ result_ns.add_resource(Election_Results, '')
 
 @election_ns.route('')
 class Election_API(Resource):
+    # @jwt_required()
+    # @admin_required
     @election_ns.marshal_list_with(election_model)
     def get(self):
         return Election.query.all()
@@ -159,12 +206,15 @@ class Election_API(Resource):
         db.session.commit()
         return new_election , 201
     
+    # @jwt_required()
+    # @admin_required
     def delete(self):
         active_election = Election.query.filter_by(status='active').first()
         if not active_election:
             election_ns.abort(404, 'No active election')
 
-        active_election.status = 'closed'
+        if active_election.status == 'active':
+            db.session.delete(active_election)
         db.session.commit()
         return {'message' : 'Election closed succefully'} , 200
     
