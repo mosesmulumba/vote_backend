@@ -20,3 +20,16 @@ This repository contains the backend code for an E-Voting System API built using
     * Election Results: Provides aggregated results of votes for each candidate, ensuring transparent and accurate result reporting.
 * Error Handling
     * Custom Error Responses: Implements custom error handlers to provide meaningful error messages and appropriate HTTP status codes for different types of errors.
+
+## You can clone this repository by on this link
+https://github.com/mosesmulumba/vote_backend.git
+
+## Then run a change directory command to checkout the repository directory
+cd vote_backend
+
+## Create an environment where you will install the required extensions and libraries
+  *  python3 -m venv <name_of_environment>
+
+   * source <namr_of_environment>/bin/activate
+
+   * pip3 install -r requirements.txt
