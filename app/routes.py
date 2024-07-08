@@ -1,22 +1,14 @@
 from flask import jsonify , request
 from functools import wraps
-from flask_jwt_extended import create_access_token ,jwt_required , get_jwt_identity , verify_jwt_in_request
+from flask_jwt_extended import create_access_token ,jwt_required , get_jwt_identity , verify_jwt_in_request , get_jwt
 from flask_restx import  Resource
 from .resources import db , api , auth_ns, member_ns, candidate_ns, election_ns, vote_ns , result_ns
 from .api_models import members_model , member_model_input , candidate_model_input , candidate_model , vote_model , vote_model_input , election_model , election_model_input , login_model
-from .models import User , Candidate , Vote , Election
-
-
-# creating the role custom function to check if one is admin
-def admin_required(fn):
-    @wraps(fn)
-    def wrapper(*args , **kwargs):
-        verify_jwt_in_request()
-        claims = get_jwt_identity()
-        if claims['role'] != 'admin':
-            return jsonify({'msg':'Admins only allowed'}) , 403
-        return fn(*args , **kwargs)
-    return wrapper
+from app.models.student import User
+from app.models.candidate import Candidate 
+from app.models.election import Election
+from app.models.vote import Vote
+# from app.helper.admin_required_helper import admin_required
 
 @auth_ns.route('/login')
 class Login(Resource):
@@ -25,14 +17,14 @@ class Login(Resource):
         data = auth_ns.payload
         user = User.query.filter_by(username=data['username']).first()
         if user and user.email == data['email']:
-            access_token = create_access_token(identity={'id':user.id , 'role':user.role})
+            access_token = create_access_token(identity={'id':user.id})
             result_access_token = [access_token]
             return jsonify({
                 "access_token" :result_access_token , 
                 "username" : user.username , 
                 "user-password" :user.password,
                 "user_email" : user.email,
-                "role" : user.role,
+                # "role" : user.role,
                 "date_created": user.date_created
                 })
         return jsonify({'msg': 'Bad Username or email'}), 401
@@ -78,6 +70,7 @@ class Member_ByID(Resource):
     # @admin_required
     @member_ns.marshal_with(members_model)
     def get(self, id):
+        # current_student = get_jwt_identity()
         student = User.query.get(id)
         return student
     

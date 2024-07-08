@@ -21,7 +21,7 @@ member_model_input = member_ns.model("MemberInput",{
     "email": fields.String,
     "password" : fields.String,
     "created_date": fields.DateTime,
-    "role": fields.String
+    # "role": fields.String
 })
 
 
